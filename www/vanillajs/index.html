@@ -1,0 +1,138 @@
+<script src="webgazer.js" type="text/javascript"></script>
+
+<script>
+(function() {
+    console.log("init");
+    webgazer.setGazeListener(function(data, elapsedTime) {
+        if (data == null) {
+            return;
+        }
+        // var xprediction = data.x; //these x coordinates are relative to the viewport
+        // var yprediction = data.y; //these y coordinates are relative to the viewport
+    }).begin();
+
+    let lastWordSpoken = null;
+
+    function speak(words){
+        var msg = new SpeechSynthesisUtterance();
+        msg.text = words;
+        window.speechSynthesis.speak(msg);
+    }
+
+    function checkIfSpeechIsIntended(word){
+        lastWordSpoken = word;
+        setTimeout(function(){
+            const isStillFocused = word.classList.contains("focused");
+            if(isStillFocused){
+                const wordPronounciation = word.getAttribute("pronounciation");
+                speak(wordPronounciation);
+            }
+        }, 1000);
+
+    }
+
+    function checkOverlap() {
+        const gazeDot = document.querySelector("#webgazerGazeDot");
+        const words = document.querySelectorAll(".word");
+
+        // Get the position and dimensions of the gaze dot
+        const gazeDotRect = gazeDot.getBoundingClientRect();
+
+        // Check for overlap with each word element
+        words.forEach((word) => {
+            const wordRect = word.getBoundingClientRect();
+
+            if (
+                gazeDotRect.left < wordRect.right &&
+                gazeDotRect.right > wordRect.left &&
+                gazeDotRect.top < wordRect.bottom &&
+                gazeDotRect.bottom > wordRect.top
+            ) {
+                // Gaze dot is overlapping with the word, add the .focused class
+                const isDifferentToLastWord = lastWordSpoken !== word;
+                if(!isDifferentToLastWord) return;
+
+                word.classList.add("focused");
+                checkIfSpeechIsIntended(word);
+
+            } else {
+            // Gaze dot is not overlapping with the word, remove the .focused class
+            word.classList.remove("focused");
+            }
+        });
+    }
+
+    // Run the checkOverlap function every 0.5 seconds
+    setInterval(checkOverlap, 500);
+
+})();
+</script>
+
+<style>
+    #webgazerGazeDot{
+        background:white!important;
+        border: 2px solid rgb(172, 172, 172)!important;
+        width: 50px!important;
+        height: 50px!important;
+        transition: all 0.5s ease;
+    }
+    #webgazerGazeDot::after{
+        content: "";
+        box-shadow: 0 0 0 0 rgba(0, 0, 0, 1);
+        transform: scale(1);
+        animation: pulse 2s infinite;
+        width: 50px!important;
+        height: 50px!important;
+        border-radius: 1000px;
+        display: block;
+    }
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.7);
+        }
+
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 10px rgba(0, 0, 0, 0);
+        }
+
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+        }
+    }
+    .words{
+        text-align: center;
+        margin: auto;
+        margin-top: 20%;
+    }
+    .word{
+        background: #e9e9e9;
+        padding: 200px;
+        font-size: 30px;
+        display: inline-block;
+        width: 350px;
+        text-align: center;
+        font-family: Arial, Helvetica, sans-serif;
+        border-radius: 5px;
+    }
+    .word:nth-of-type(1){
+        margin-right: 100px;
+    }
+    .focused{
+        background: rgb(91, 195, 91)!important;
+        border: 1px solid rgb(91, 195, 91)!important;
+        transition: all 0.5s ease-in;
+    }
+</style>
+
+<div class="words">
+    <div class="word" pronounciation="Yes">
+        Yes
+    </div>
+
+    <div class="word" pronounciation="No">
+        No
+    </div>
+</div>
