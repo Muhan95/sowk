@@ -3,7 +3,8 @@
 <script src="../js/precision_store_points.js"></script>
 
 <script>
-(function() {
+document.addEventListener("DOMContentLoaded", function() {
+
     console.log("init");
     webgazer.setGazeListener(function(data, elapsedTime) {
         if (data == null) {
@@ -22,6 +23,86 @@
         msg.text = wordPronounciation;
         window.speechSynthesis.speak(msg);
     }
+
+    function generatePositions(numberOfPositions) {
+        const positions = [];
+        const edgePositions = numberOfPositions / 4; // divide by 4 because we have 4 edges
+
+        const paddingPercent = 10; // 5% padding from the edges
+        const paddingWidth = (window.innerWidth * paddingPercent) / 100;
+        const paddingHeight = (window.innerHeight * paddingPercent) / 100;
+
+        const effectiveWidth = window.innerWidth - 2 * paddingWidth;
+        const effectiveHeight = window.innerHeight - 2 * paddingHeight;
+
+        // Calculate the interval based on the number of positions on one edge
+        const horizontalInterval = effectiveWidth / (edgePositions - 1);
+        const verticalInterval = effectiveHeight / (edgePositions - 1);
+
+        // Top edge
+        for (let i = 0; i < edgePositions; i++) {
+            positions.push({ x: `${paddingWidth + i * horizontalInterval}px`, y: `${paddingHeight}px` });
+        }
+
+        // Right edge
+        for (let i = 1; i < edgePositions - 1; i++) {
+            positions.push({ x: `${window.innerWidth - paddingWidth}px`, y: `${paddingHeight + i * verticalInterval}px` });
+        }
+
+        // Bottom edge
+        for (let i = 0; i < edgePositions; i++) {
+            positions.push({ x: `${window.innerWidth - paddingWidth - i * horizontalInterval}px`, y: `${window.innerHeight - paddingHeight}px` });
+        }
+
+        // Left edge
+        for (let i = 1; i < edgePositions - 1; i++) {
+            positions.push({ x: `${paddingWidth}px`, y: `${window.innerHeight - paddingHeight - i * verticalInterval}px` });
+        }
+
+        return positions;
+    }
+
+    function startCalibration() {
+        let countdown = 5;
+
+        const dot = document.querySelector('.calibration-dot');
+        const calibrationDiv = document.querySelector('.calibration-screen');
+
+        const positions = generatePositions(16);
+
+        function moveDot(index) {
+            // if (index >= positions.length) {
+            //     calibrationDiv.remove();
+            //     return;
+            // }
+            dot.style.left = positions[index].x;
+            dot.style.top = positions[index].y;
+
+            console.log('calibrating');
+            // Simulate click event
+            const clickEvent = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                clientX: window.innerWidth * parseFloat(positions[index].x) / 100,
+                clientY: window.innerHeight * parseFloat(positions[index].y) / 100
+            });
+            dot.dispatchEvent(clickEvent);
+
+            setTimeout(() => moveDot(index + 1), 1000);
+        }
+
+        const interval = setInterval(() => {
+            countdown--;
+            calibrationDiv.innerText = `Calibration starting in ${countdown} seconds, follow the red dot`;
+            if (countdown === 0) {
+                clearInterval(interval);
+                calibrationDiv.innerText = 'Calibration started';
+                moveDot(0);
+            }
+        }, 1000);
+    }
+
 
     function startConfirmationCountdown(confirmationTimeSeconds) {
         const countdownElement = document.querySelector('.word-confirmation .countdown .number');
@@ -116,10 +197,13 @@
         });
     }
 
+    startCalibration();
+
     // Run the checkOverlap function every 0.5 seconds
     setInterval(checkOverlap, 500);
 
-})();
+});
+
 </script>
 
 <style>
@@ -192,6 +276,7 @@
         top: 0;
         text-align: center;
         background: white;
+        display: none!important;
     }
     .word-confirmation .cancel{
         position: fixed;
@@ -219,6 +304,30 @@
         font-size: 4rem;
     }
 
+    .calibration-dot{
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: red;
+        z-index: 99999999;
+        top: 50%;
+        left: 50%;
+        transition: all 0.2s ease;
+    }
+    .calibration-screen{
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: black;
+        color: white;
+        font-size: 24px;
+        text-align: center;
+    }
+
+
     @media only screen and (min-width : 768px) {
         .word{
             margin-right: 0!important;
@@ -229,17 +338,10 @@
     }
 </style>
 
-<div class="calibrationDiv">
-    <input type="button" class="Calibration" id="Pt1"></input>
-    <input type="button" class="Calibration" id="Pt2"></input>
-    <input type="button" class="Calibration" id="Pt3"></input>
-    <input type="button" class="Calibration" id="Pt4"></input>
-    <input type="button" class="Calibration" id="Pt5"></input>
-    <input type="button" class="Calibration" id="Pt6"></input>
-    <input type="button" class="Calibration" id="Pt7"></input>
-    <input type="button" class="Calibration" id="Pt8"></input>
-    <input type="button" class="Calibration" id="Pt9"></input>
+<div class="calibration-screen">
+    Calibration starting in 5 seconds, follow the red dot
 </div>
+<div class="calibration-dot"></div>
 
 <div class="words">
     <div class="word triggerable" pronounciation="Oy">
@@ -271,7 +373,7 @@
         In <span class="number"></span> seconds
     </div>
 
-    <div class="cancel triggerable">
+    <!-- <div class="cancel triggerable">
         Cancel
-    </div>
+    </div> -->
 </div>
